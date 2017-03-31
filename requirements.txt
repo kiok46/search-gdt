@@ -1,0 +1,7 @@
+flask==0.12
+Jinja2==2.9.5
+MarkupSafe==1.0
+Werkzeug==0.12.1
+click==6.7
+itsdangerous==0.24
+jinja==1.2
