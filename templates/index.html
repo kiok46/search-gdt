@@ -5,10 +5,34 @@
         {% block result %}
             <form method="POST" action="/result">
                 <div class="row">
-                    <div class="col s6 m6 l6">
-                        <input type="text" name="search-string" placeholder="Search me and fly!!!!!" required>
-                        <button class="btn center" type="submit"><i class="fa fa-search left"></i>Search</button>
+                    <div class="col s12 m12 l12">
+                        <h1 class="text-center"> Search GDT</h1>
                     </div>
+
+                    <div class="col s12 m6">
+                        <div class="card horizontal">
+                            <div class="card-stacked">
+                                <div class="card-content">
+                                    <input type="text" name="search-string" placeholder="Search me and fly!!!!!" required>
+                                    <button class="btn center" type="submit"><i class="fa fa-search left"></i>Search</button>
+                                    <p style="padding-top: 20px">
+                                        Search and get the results in JSON format in a new url. <a>https://search-gdt.herokuapp.com/result</a>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col s12 m6">
+                        <div class="card horizontal">
+                            <div class="card-stacked">
+                                <div class="card-content">
+                                    <h1 class="text-center">Use open search api</h1>
+                                    <p class="text-center">https://search-gdt.herokuapp.com/search/ <br> Add your search string at the end and use it like. <a href="http://127.0.0.1:5000/search/the dark night">https://search-gdt.herokuapp.com/search/the dark night</a></p>
+                                </div>
+                            </div>
+                        </div>
+                  </div>
                 </div>
             </form>
         {% endblock %}
