@@ -5,7 +5,6 @@ import urllib
 import requests
 import config_ext
 import asyncio
-import aiohttp
 import sys
 import time
 from twitter import *
