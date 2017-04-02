@@ -1,4 +1,4 @@
-from flask import Flask, request, g, render_template, Response
+from flask import Flask, request, g, render_template, Response, jsonify
 from flask import session, flash, redirect, url_for, make_response
 import json
 import urllib
@@ -7,6 +7,7 @@ import config_ext
 import asyncio
 import aiohttp
 import sys
+import time
 from twitter import *
 
 
@@ -22,74 +23,112 @@ twitter_search = Twitter(
 
 @app.route('/')
 def index():
+    '''
+    Entry point.
+    '''
     return render_template("index.html")
 
 
 async def async_google_search(search_string, search_url):
-    try:
-        google_api_result = {}
-        google_api_response = requests.get(config_ext.google_search_url.format(config_ext.google_api_key,
+    '''
+    Async google search api.
+    Returns the url, response time of the google custom search api and the
+    text of the first tweet from the response.
+
+    params:
+        - search_string
+        type: string
+
+        - search_url
+        type: string
+    '''
+    
+    google_api_result = {}
+    start = time.time()
+    google_api_response = requests.get(config_ext.google_search_url.format(config_ext.google_api_key,
                                                                            config_ext.google_cx,
                                                                            search_string))
-        google_response = json.loads(google_api_response.text)
-        try:
-            google_api_result['text'] = google_response.get('items')[0].get('title')
-        except:
-            google_api_result['text'] = "No valid response from google api."
-        google_api_result['url'] = search_url
-        return google_api_result
+    end = time.time()
+    google_response = json.loads(google_api_response.text)
+    try:
+        google_api_result['text'] = google_response.get('items')[0].get('title')
     except:
-        raise Exception("Error from google api")
+        google_api_result['text'] = "No valid response from google api."
+    google_api_result['url'] = search_url
+    
+    google_api_result['response_time'] = str(end-start)
+    return google_api_result
 
 
 async def async_duckduckgo_search(search_string, search_url):
-    try:
-        duckduckgo_api_result = {}
-        duckduckgo_api_response = requests.get(config_ext.duckduckgo_base_url.format(search_string))
+    '''
+    Async duckduckgo search api.
+    Returns the url, response time of the duckduckgo open api and the text of the first
+    tweet from the response.
 
-        duckduckgo_response = json.loads(duckduckgo_api_response.text)
-        try:
-            duckduckgo_api_result['text'] = duckduckgo_response.get('RelatedTopics')[0].get('Text')
-        except:
-            duckduckgo_api_result['text'] = "No valid response from duckduckgo api."
-        duckduckgo_api_result['url'] = search_url
-        return duckduckgo_api_result
+    params:
+        - search_string
+        type: string
+
+        - search_url
+        type: string
+    '''
+    
+    duckduckgo_api_result = {}
+    start = time.time()
+    duckduckgo_api_response = requests.get(config_ext.duckduckgo_base_url.format(search_string))
+    end = time.time()
+    duckduckgo_response = json.loads(duckduckgo_api_response.text)
+    try:
+        duckduckgo_api_result['text'] = duckduckgo_response.get('RelatedTopics')[0].get('Text')
     except:
-        raise Exception("Error from duckduckgo api")
+        duckduckgo_api_result['text'] = "No valid response from duckduckgo api."
+    duckduckgo_api_result['url'] = search_url
+    
+    duckduckgo_api_result['response_time'] = str(end-start)
+    
+    return duckduckgo_api_result
 
 
 async def async_twitter_search(search_string, search_url):
+    '''
+    Async twitter search api.
+    Returns the url, response time of the twitter api and the text of the first
+    tweet from the response.
+
+    params:
+        - search_string
+        type: string
+
+        - search_url
+        type: string
+    '''
+    twitter_api_result = {}
+    start = time.time()
+    twitter_response = twitter_search.search.tweets(q=urllib.parse.quote(search_string), count=100)
+    end = time.time()
+
     try:
-        twitter_api_result = {}
-        if sys.version_info[0] == 3:
-            twitter_response = twitter_search.search.tweets(q=urllib.parse.quote(search_string), count=100)
-        else:
-            twitter_response = twitter_search.search.tweets(q=urllib.quote(search_string), count=100)
-
-        try:
-            twitter_api_result['text'] = twitter_response['statuses'][0]['text']
-        except:
-            twitter_api_result['text'] = "No valid response from twitter api."
-
-        twitter_api_result['url'] = search_url
-
-        return twitter_api_result
+        twitter_api_result['text'] = twitter_response['statuses'][0]['text']
     except:
-        raise Exception("Error from twitter api")
+        twitter_api_result['text'] = "No valid response from twitter api."
+
+    twitter_api_result['url'] = search_url
+    twitter_api_result['response_time'] = str(end-start)
+    return twitter_api_result
 
 
 def common_async_search(search_string, *args):
-    """
+    '''
     Common async search for google, duckduckgo and twitter.
-    """
+    '''
 
     results = {}
     search_result = {}
 
-    search_url = "https://search-gdt.herokuapp.com?q={}".format(search_string)
-    
+    search_url = "https://search-gdt.herokuapp.com/search/{}".format(search_string)
+    event_loop = asyncio.get_event_loop() 
     try:
-        event_loop = asyncio.get_event_loop()
         task_duckduckgo = event_loop.create_task(async_duckduckgo_search(search_string=search_string,
                                                                          search_url=search_url))
         task_google = event_loop.create_task(async_google_search(search_string=search_string,
@@ -99,9 +138,12 @@ def common_async_search(search_string, *args):
         event_loop.run_until_complete(task_duckduckgo)
         event_loop.run_until_complete(task_google)
         event_loop.run_until_complete(task_twitter)
+
     finally:
-        pass
-        #event_loop.close()
+        #event_loop.run_forever()
+        asyncio.set_event_loop(asyncio.new_event_loop())
+
+    #event_loop = asyncio.get_event_loop()
 
     duckduckgo_api_result = task_duckduckgo.result()
     google_api_result = task_google.result()
@@ -120,16 +162,37 @@ def common_async_search(search_string, *args):
                     )
 
 
+@app.errorhandler(404)
+def not_found(error):
+    '''
+    Handles if 404 occurs.
+    '''
+    return render_template("404.html")
+
+
 @app.route('/search/<search_string>', methods=['GET', 'POST'])
 def search_gdt(search_string):
+    '''
+    This function searches google, duckduckgo and twitter api in
+    asyncio loop.
+
+    params:
+        - search_string
+        type: string
+    '''
     if request.method == 'GET':
-        return common_async_search(search_string)
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(common_async_search(search_string))
+        #return common_async_search(search_string)
 
     return render_template("index.html")
 
 
 @app.route('/result', methods=['GET', 'POST'])
 def result():
+    '''
+    This function returns in json format of the search result.
+    '''
     if request.method == 'POST':
         search_string = request.form['search-string']
         return common_async_search(search_string)
@@ -138,4 +201,4 @@ def result():
 
 
 if __name__ == "__main__":
-    app.run(port=4000)
+    app.run()
