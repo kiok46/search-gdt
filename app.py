@@ -1,5 +1,6 @@
 from flask import Flask, request, g, render_template, Response, jsonify
 from flask import session, flash, redirect, url_for, make_response
+from flask_restful import Resource, Api
 import json
 import urllib
 import requests
@@ -11,6 +12,7 @@ from twitter import *
 
 
 app = Flask(__name__)
+api = Api(app)
 
 
 twitter_search = Twitter(
@@ -169,22 +171,10 @@ def not_found(error):
     return render_template("404.html")
 
 
-@app.route('/search/<search_string>', methods=['GET', 'POST'])
-def search_gdt(search_string):
-    '''
-    This function searches google, duckduckgo and twitter api in
-    asyncio loop.
+class SearchGDT(Resource):
 
-    params:
-        - search_string
-        type: string
-    '''
-    if request.method == 'GET':
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(common_async_search(search_string))
-        #return common_async_search(search_string)
-
-    return render_template("index.html")
+    def get(self, search_string):
+        return common_async_search(search_string)
 
 
 @app.route('/result', methods=['GET', 'POST'])
@@ -197,6 +187,9 @@ def result():
         return common_async_search(search_string)
 
     return render_template("index.html")
+
+
+api.add_resource(SearchGDT, '/api/search/<search_string>')
 
 
 if __name__ == "__main__":

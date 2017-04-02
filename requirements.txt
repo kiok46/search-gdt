@@ -1,9 +1,11 @@
+aniso8601==1.2.0
 appdirs==1.4.3
 async-timeout==1.2.0
 asyncio==3.4.3
 chardet==2.3.0
 click==6.7
 Flask==0.12.1
+Flask-RESTful==0.3.5
 gevent==1.2.1
 greenlet==0.4.12
 gunicorn==19.7.1
@@ -13,6 +15,8 @@ MarkupSafe==1.0
 multidict==2.1.4
 packaging==16.8
 pyparsing==2.2.0
+python-dateutil==2.6.0
+pytz==2017.2
 requests==2.13.0
 six==1.10.0
 twitter==1.17.1
