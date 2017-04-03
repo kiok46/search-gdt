@@ -1,7 +1,8 @@
 {% extends "layout.html" %}
 
 {% block content %}
-    <section>
-        <h1>Time limit exceded.</h1>
+    <section class="text-center">
+    	<h3>Time limit exceded</h3>
+        <p>It took more than {{timeout}} second for {{error_report}} to respond.</p>
     </section>
 {% endblock %}

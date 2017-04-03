@@ -1,3 +1,7 @@
+"""
+KULDEEP SINGH
+"""
+
 from flask import Flask, request, g, render_template, Response, jsonify
 from flask import session, flash, redirect, url_for, make_response
 from flask_restful import Resource, Api
@@ -30,7 +34,7 @@ def index():
     return render_template("index.html")
 
 
-async def async_google_search(search_string, search_url):
+async def async_google_search(search_string, search_url, timeout):
     '''
     Async google search api.
     Returns the url, response time of the google custom search api and the
@@ -50,6 +54,8 @@ async def async_google_search(search_string, search_url):
                                                                            config_ext.google_cx,
                                                                            search_string))
     end = time.time()
+    if end-start > timeout:
+        return False
     google_response = json.loads(google_api_response.text)
     try:
         google_api_result['text'] = google_response.get('items')[0].get('title')
@@ -61,7 +67,7 @@ async def async_google_search(search_string, search_url):
     return google_api_result
 
 
-async def async_duckduckgo_search(search_string, search_url):
+async def async_duckduckgo_search(search_string, search_url, timeout):
     '''
     Async duckduckgo search api.
     Returns the url, response time of the duckduckgo open api and the text of the first
@@ -79,6 +85,8 @@ async def async_duckduckgo_search(search_string, search_url):
     start = time.time()
     duckduckgo_api_response = requests.get(config_ext.duckduckgo_base_url.format(search_string))
     end = time.time()
+    if end-start > timeout:
+        return False
     duckduckgo_response = json.loads(duckduckgo_api_response.text)
     try:
         duckduckgo_api_result['text'] = duckduckgo_response.get('RelatedTopics')[0].get('Text')
@@ -91,7 +99,7 @@ async def async_duckduckgo_search(search_string, search_url):
     return duckduckgo_api_result
 
 
-async def async_twitter_search(search_string, search_url):
+async def async_twitter_search(search_string, search_url, timeout):
     '''
     Async twitter search api.
     Returns the url, response time of the twitter api and the text of the first
@@ -108,6 +116,8 @@ async def async_twitter_search(search_string, search_url):
     start = time.time()
     twitter_response = twitter_search.search.tweets(q=urllib.parse.quote(search_string), count=100)
     end = time.time()
+    if end-start > timeout:
+        return False
 
     try:
         twitter_api_result['text'] = twitter_response['statuses'][0]['text']
@@ -130,12 +140,17 @@ def common_async_search(search_string, *args):
     search_url = "https://search-gdt.herokuapp.com/search/{}".format(search_string)
     event_loop = asyncio.get_event_loop() 
     try:
+        timeout = 2
         task_duckduckgo = event_loop.create_task(async_duckduckgo_search(search_string=search_string,
-                                                                         search_url=search_url))
+                                                                         search_url=search_url,
+                                                                         timeout=timeout))
         task_google = event_loop.create_task(async_google_search(search_string=search_string,
-                                                                 search_url=search_url))
+                                                                 search_url=search_url,
+                                                                 timeout=timeout))
         task_twitter = event_loop.create_task(async_twitter_search(search_string=search_string,
-                                                                   search_url=search_url))
+                                                                   search_url=search_url,
+                                                                   timeout=timeout))
+
         event_loop.run_until_complete(task_duckduckgo)
         event_loop.run_until_complete(task_google)
         event_loop.run_until_complete(task_twitter)
@@ -144,11 +159,26 @@ def common_async_search(search_string, *args):
         #event_loop.run_forever()
         asyncio.set_event_loop(asyncio.new_event_loop())
 
-    #event_loop = asyncio.get_event_loop()
-
     duckduckgo_api_result = task_duckduckgo.result()
     google_api_result = task_google.result()
     twitter_api_result = task_twitter.result()
+
+    error_report = ''
+
+    if not duckduckgo_api_result:
+        error_report+= "DuckGuckGo "
+
+    if not google_api_result:
+        error_report+= "Google "
+
+    if not twitter_api_result:
+        error_report+= "Twitter "
+
+    if error_report:
+        return render_template("time_limit_exceded.html",
+                               error_report=error_report,
+                               timeout=timeout)
+
 
     results['google'] = google_api_result
     results['twitter'] = twitter_api_result
