@@ -53,6 +53,7 @@ async def async_google_search(search_string, search_url, timeout):
     google_api_response = requests.get(config_ext.google_search_url.format(config_ext.google_api_key,
                                                                            config_ext.google_cx,
                                                                            search_string))
+    print (google_api_response.status_code)
     end = time.time()
     if end-start > timeout:
         return False
@@ -60,7 +61,8 @@ async def async_google_search(search_string, search_url, timeout):
     try:
         google_api_result['text'] = google_response.get('items')[0].get('title')
     except:
-        google_api_result['text'] = "No valid response from google api."
+        google_api_result['text'] = "No valid response from google api," + \
+                                    " status code: {}".format(google_api_response.status_code)
     google_api_result['url'] = search_url
     
     google_api_result['response_time'] = str(end-start)
