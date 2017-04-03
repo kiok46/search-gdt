@@ -139,9 +139,9 @@ def common_async_search(search_string, *args):
     search_result = {}
 
     search_url = "https://search-gdt.herokuapp.com/search/{}".format(search_string)
-    event_loop = asyncio.get_event_loop() 
+    event_loop = asyncio.get_event_loop()
     try:
-        timeout = 2
+        timeout = 1.5
         task_duckduckgo = event_loop.create_task(async_duckduckgo_search(search_string=search_string,
                                                                          search_url=search_url,
                                                                          timeout=timeout))
