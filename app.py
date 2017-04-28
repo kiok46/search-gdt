@@ -47,7 +47,7 @@ async def async_google_search(search_string, search_url, timeout):
         - search_url
         type: string
     '''
-    
+
     google_api_result = {}
     start = time.time()
     google_api_response = requests.get(config_ext.google_search_url.format(config_ext.google_api_key,
@@ -58,12 +58,12 @@ async def async_google_search(search_string, search_url, timeout):
         return False
     google_response = json.loads(google_api_response.text)
     try:
-        google_api_result['text'] = google_response.get('items')[0].get('title')
+        google_api_result['text'] = google_response
     except:
         google_api_result['text'] = "No valid response from google api," + \
                                     " status code: {}".format(google_api_response.status_code)
     google_api_result['url'] = search_url
-    
+
     google_api_result['response_time'] = str(end-start)
     return google_api_result
 
@@ -81,7 +81,7 @@ async def async_duckduckgo_search(search_string, search_url, timeout):
         - search_url
         type: string
     '''
-    
+
     duckduckgo_api_result = {}
     start = time.time()
     duckduckgo_api_response = requests.get(config_ext.duckduckgo_base_url.format(search_string))
@@ -90,13 +90,13 @@ async def async_duckduckgo_search(search_string, search_url, timeout):
         return False
     duckduckgo_response = json.loads(duckduckgo_api_response.text)
     try:
-        duckduckgo_api_result['text'] = duckduckgo_response.get('RelatedTopics')[0].get('Text')
+        duckduckgo_api_result['text'] = duckduckgo_response
     except:
         duckduckgo_api_result['text'] = "No valid response from duckduckgo api."
     duckduckgo_api_result['url'] = search_url
-    
+
     duckduckgo_api_result['response_time'] = str(end-start)
-    
+
     return duckduckgo_api_result
 
 
@@ -121,7 +121,7 @@ async def async_twitter_search(search_string, search_url, timeout):
         return False
 
     try:
-        twitter_api_result['text'] = twitter_response['statuses'][0]['text']
+        twitter_api_result['text'] = twitter_response['statuses']
     except:
         twitter_api_result['text'] = "No valid response from twitter api."
 
@@ -135,13 +135,14 @@ def common_async_search(search_string, *args):
     Common async search for google, duckduckgo and twitter.
     '''
 
+    timeout = 5
+
     results = {}
     search_result = {}
 
     search_url = "https://search-gdt.herokuapp.com/search/{}".format(search_string)
     event_loop = asyncio.get_event_loop()
     try:
-        timeout = 1.5
         task_duckduckgo = event_loop.create_task(async_duckduckgo_search(search_string=search_string,
                                                                          search_url=search_url,
                                                                          timeout=timeout))
@@ -157,7 +158,7 @@ def common_async_search(search_string, *args):
         event_loop.run_until_complete(task_twitter)
 
     finally:
-        #event_loop.run_forever()
+        # event_loop.run_forever()
         asyncio.set_event_loop(asyncio.new_event_loop())
 
     duckduckgo_api_result = task_duckduckgo.result()
@@ -179,7 +180,6 @@ def common_async_search(search_string, *args):
         return render_template("time_limit_exceded.html",
                                error_report=error_report,
                                timeout=timeout)
-
 
     results['google'] = google_api_result
     results['twitter'] = twitter_api_result
